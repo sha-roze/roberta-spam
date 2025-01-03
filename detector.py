@@ -89,6 +89,10 @@ class SpamMessageDetector:
                 outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
 
                 loss = outputs.loss
+
+                if isinstance(loss, torch.Tensor) and loss.numel() > 1:
+                    loss = loss.mean()  # Aggregate the loss across GPUs
+
                 train_loss += loss.item()
                 
                 loss.backward()
