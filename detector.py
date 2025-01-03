@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from transformers import RobertaTokenizer, RobertaForSequenceClassification, get_linear_schedule_with_warmup
 from dataset import SpamMessageDataset
@@ -25,6 +26,10 @@ class SpamMessageDetector:
         self.model = RobertaForSequenceClassification.from_pretrained(model_path, num_labels=2)
         self.model = self.model.to(self.device)
         self.max_length = max_length
+
+        if torch.cuda.device_count() > 1:
+            print(f"Using {torch.cuda.device_count()} GPUs")
+            self.model = nn.DataParallel(self.model)
     
     def train(self, train_data_path, val_data_path=None, num_epochs=5, batch_size=32, learning_rate=2e-5):
         random_seed(self.seed)
