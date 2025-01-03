@@ -1,6 +1,5 @@
 import pandas as pd
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from transformers import (
     RobertaTokenizer,
@@ -13,8 +12,8 @@ from utils.plotting import plot_heatmap
 from utils.seed import random_seed
 
 import matplotlib.pyplot as plt
-
 from tqdm import tqdm
+import torch.nn as nn
 
 
 def save_list_to_file(lst, filename):
@@ -32,12 +31,13 @@ class SpamMessageDetector:
         self.model = RobertaForSequenceClassification.from_pretrained(
             model_path, num_labels=2
         )
-        self.model = self.model.to(self.device)
-        self.max_length = max_length
 
         if torch.cuda.device_count() > 1:
             print(f"Using {torch.cuda.device_count()} GPUs")
             self.model = nn.DataParallel(self.model)
+
+        self.model = self.model.to(self.device)
+        self.max_length = max_length
 
     def train(
         self,
@@ -49,7 +49,7 @@ class SpamMessageDetector:
     ):
         random_seed(self.seed)
 
-        if val_data_path is None:  # no validation dataset, split the given data
+        if val_data_path is None:
             # Load and preprocess the training data
             data = pd.read_csv(train_data_path)
             text = data["text"].values
@@ -71,7 +71,9 @@ class SpamMessageDetector:
             train_dataset = SpamMessageDataset(
                 train_text, train_labels, self.tokenizer, max_length=self.max_length
             )
-            val_data = pd.read_csv(train_data_path)
+
+            # Load and preprocess the validation data
+            val_data = pd.read_csv(val_data_path)  # Fixed: use val_data_path
             val_text = val_data["text"].values
             val_labels = val_data["label"].values
             val_dataset = SpamMessageDataset(
@@ -90,12 +92,12 @@ class SpamMessageDetector:
         )
 
         # Fine-tuning loop
-        train_losses = list()
-        val_losses = list()
-        val_accuracies = list()
-        val_precisions = list()
-        val_recalls = list()
-        val_f1_scores = list()
+        train_losses = []
+        val_losses = []
+        val_accuracies = []
+        val_precisions = []
+        val_recalls = []
+        val_f1_scores = []
 
         for epoch in range(num_epochs):
             self.model.train()
@@ -116,9 +118,7 @@ class SpamMessageDetector:
                 )
 
                 loss = outputs.loss
-
-                if isinstance(loss, torch.Tensor) and loss.numel() > 1:
-                    loss = loss.mean()  # Aggregate the loss across GPUs
+                loss = loss.mean()  # Aggregate loss across GPUs
 
                 train_loss += loss.item()
 
@@ -130,20 +130,17 @@ class SpamMessageDetector:
                 scheduler.step()
 
                 # Update the progress bar
-                progress_bar.set_postfix(
-                    {"Training Loss": train_loss / (batch_size * (progress_bar.n + 1))}
-                )
+                current_step = progress_bar.n + 1
+                current_batch_size = input_ids.size(0)
+                avg_loss = train_loss / current_step
+                progress_bar.set_postfix({"Training Loss": avg_loss})
 
             train_loss /= len(train_loader)
             train_losses.append(train_loss)
 
             # Evaluation on the validation set
             self.model.eval()
-            val_loss = 0.0
             total_val_loss = 0.0
-            val_accuracy = 0.0
-            val_precision = 0.0
-            val_recall = 0.0
 
             with torch.no_grad():
                 y_true = []
@@ -159,9 +156,11 @@ class SpamMessageDetector:
                     )
 
                     loss = outputs.loss
-                    logits = outputs.logits
+                    loss = loss.mean()  # Aggregate loss across GPUs
+
                     total_val_loss += loss.item()
 
+                    logits = outputs.logits
                     predictions = torch.argmax(logits, dim=1)
 
                     y_true.extend(labels.tolist())
@@ -177,12 +176,13 @@ class SpamMessageDetector:
                 val_f1_scores.append(val_f1)
                 val_accuracies.append(val_accuracy)
 
-            # Print the metrics and confusion matrix for each epoch
+            # Print the metrics for each epoch
             print(
-                f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f} - Val Accuracy: {val_accuracy:.4f} - Val Precision: {val_precision:.4f} - Val Recall: {val_recall:.4f}"
+                f"Epoch {epoch + 1}/{num_epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f} - "
+                f"Val Accuracy: {val_accuracy:.4f} - Val Precision: {val_precision:.4f} - Val Recall: {val_recall:.4f}"
             )
 
-        # Plots data
+        # Save metrics to files
         save_list_to_file(train_losses, "plots/train_losses.txt")
         save_list_to_file(val_losses, "plots/val_losses.txt")
         save_list_to_file(val_accuracies, "plots/val_accuracies.txt")
@@ -190,7 +190,7 @@ class SpamMessageDetector:
         save_list_to_file(val_recalls, "plots/val_recalls.txt")
         save_list_to_file(val_f1_scores, "plots/val_f1_scores.txt")
 
-        # Plots
+        # Generate and save plots
         plt.figure(figsize=(10, 6))
         plt.plot(train_losses, label="Training Loss")
         plt.plot(val_losses, label="Validation Loss")
@@ -199,6 +199,7 @@ class SpamMessageDetector:
         plt.title("Training and Validation Loss")
         plt.legend()
         plt.savefig("plots/train_validation_loss.jpg")
+        plt.close()
 
         plt.figure(figsize=(10, 6))
         plt.plot(val_accuracies, label="Validation Accuracy")
@@ -207,6 +208,7 @@ class SpamMessageDetector:
         plt.title("Accuracy")
         plt.legend()
         plt.savefig("plots/validation_accuracy.jpg")
+        plt.close()
 
         plt.figure(figsize=(10, 6))
         plt.plot(val_precisions, label="Validation Precision")
@@ -216,6 +218,7 @@ class SpamMessageDetector:
         plt.title("Precision / Recall")
         plt.legend()
         plt.savefig("plots/validation_precision_recall.jpg")
+        plt.close()
 
     def evaluate(self, dataset_path):
         random_seed(self.seed)
@@ -252,7 +255,7 @@ class SpamMessageDetector:
                 else:
                     predictions.append("spam")
 
-        # compute evaluation metrics
+        # Compute evaluation metrics
         accuracy, precision, recall, f1 = compute_metrics(labels, predictions)
 
         # Create confusion matrix
@@ -316,10 +319,16 @@ class SpamMessageDetector:
             return predicted_labels
 
     def save_model(self, model_path):
-        self.model.save_pretrained(model_path)
-        self.tokenizer.save_pretrained(model_path)
+        if isinstance(self.model, nn.DataParallel):
+            self.model.module.save_pretrained(model_path)
+            self.tokenizer.save_pretrained(model_path)
+        else:
+            self.model.save_pretrained(model_path)
+            self.tokenizer.save_pretrained(model_path)
 
     def load_model(self, model_path):
         self.model = RobertaForSequenceClassification.from_pretrained(model_path)
         self.tokenizer = RobertaTokenizer.from_pretrained(model_path)
+        if torch.cuda.device_count() > 1:
+            self.model = nn.DataParallel(self.model)
         self.model = self.model.to(self.device)
