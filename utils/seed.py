@@ -2,6 +2,7 @@ import random
 import numpy as np
 import torch
 
+
 def random_seed(seed: int) -> None:
     """Set random seed for reproducibility."""
     random.seed(seed)

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def compute_metrics(y_true, y_pred, positive_label="spam", negative_label="ham"):
     """
     Compute evaluation metrics for binary classification.
@@ -18,20 +19,26 @@ def compute_metrics(y_true, y_pred, positive_label="spam", negative_label="ham")
     """
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
-    
+
     # Calculate accuracy
     accuracy = np.mean(y_true == y_pred)
-    
+
     # Calculate true positives, false positives, and false negatives
-    tp = np.sum(y_true == y_pred)  # Count where true positive (both true and predicted labels are the same)
-    fp = np.sum((y_true != y_pred) & (y_pred == positive_label))  # Count where false positive (true label is negative, but predicted as positive)
-    fn = np.sum((y_true != y_pred) & (y_pred == negative_label))  # Count where false negative (true label is positive, but predicted as negative)
-    
+    tp = np.sum(
+        y_true == y_pred
+    )  # Count where true positive (both true and predicted labels are the same)
+    fp = np.sum(
+        (y_true != y_pred) & (y_pred == positive_label)
+    )  # Count where false positive (true label is negative, but predicted as positive)
+    fn = np.sum(
+        (y_true != y_pred) & (y_pred == negative_label)
+    )  # Count where false negative (true label is positive, but predicted as negative)
+
     # Calculate precision, recall, and F1-score
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
     f1 = 2 * (precision * recall) / (precision + recall)
-    
+
     return accuracy, precision, recall, f1
 
 

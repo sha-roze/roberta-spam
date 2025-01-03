@@ -4,6 +4,7 @@ import math
 import argparse
 import os
 
+
 def split_dataset(filename, train_ratio):
     df = pd.read_csv(filename)
 
@@ -22,9 +23,9 @@ def split_dataset(filename, train_ratio):
     base_filename = os.path.splitext(os.path.basename(filename))[0]
     output_dir = os.path.dirname(filename)
 
-    train_filename = os.path.join(output_dir, base_filename + '_train.csv')
-    val_filename = os.path.join(output_dir, base_filename + '_val.csv')
-    test_filename = os.path.join(output_dir, base_filename + '_test.csv')
+    train_filename = os.path.join(output_dir, base_filename + "_train.csv")
+    val_filename = os.path.join(output_dir, base_filename + "_val.csv")
+    test_filename = os.path.join(output_dir, base_filename + "_test.csv")
 
     train_data.to_csv(train_filename, index=False)
     val_data.to_csv(val_filename, index=False)
@@ -35,11 +36,16 @@ def split_dataset(filename, train_ratio):
     print("Validation data saved as:", val_filename)
     print("Test data saved as:", test_filename)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Split a CSV dataset into train, validation, and test sets.')
-    parser.add_argument('filename', type=str, help='the filename of the CSV dataset')
-    parser.add_argument('train_ratio', type=float, help='the split ratio for the train set')
-    
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Split a CSV dataset into train, validation, and test sets."
+    )
+    parser.add_argument("filename", type=str, help="the filename of the CSV dataset")
+    parser.add_argument(
+        "train_ratio", type=float, help="the split ratio for the train set"
+    )
+
     args = parser.parse_args()
 
     split_dataset(args.filename, args.train_ratio)

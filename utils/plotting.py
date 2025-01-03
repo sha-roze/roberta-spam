@@ -2,7 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
 
-def plot_heatmap(cm, saveToFile=None, annot=True, fmt="d", cmap="Blues", xticklabels=None, yticklabels=None):
+
+def plot_heatmap(
+    cm,
+    saveToFile=None,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=None,
+    yticklabels=None,
+):
     """
     Plots a heatmap of the confusion matrix.
 
@@ -17,7 +26,7 @@ def plot_heatmap(cm, saveToFile=None, annot=True, fmt="d", cmap="Blues", xtickla
     Returns:
         None
     """
-    
+
     # Convert the confusion matrix to a NumPy array
     cm = np.array(cm)
 
@@ -26,7 +35,7 @@ def plot_heatmap(cm, saveToFile=None, annot=True, fmt="d", cmap="Blues", xtickla
 
     # Plot the heatmap
     im = ax.imshow(cm, cmap=cmap)
-    
+
     # Display cell values as annotations
     if annot:
         # Normalize the colormap to get values between 0 and 1
@@ -35,8 +44,10 @@ def plot_heatmap(cm, saveToFile=None, annot=True, fmt="d", cmap="Blues", xtickla
             for j in range(len(cm[i])):
                 value = cm[i, j]
                 # Determine text color based on cell value
-                text_color = 'white' if norm(value) > 0.5 else 'black'  
-                text = ax.text(j, i, format(value, fmt), ha="center", va="center", color=text_color)
+                text_color = "white" if norm(value) > 0.5 else "black"
+                text = ax.text(
+                    j, i, format(value, fmt), ha="center", va="center", color=text_color
+                )
 
     # Set x-axis and y-axis ticks and labels
     if xticklabels:
@@ -55,7 +66,7 @@ def plot_heatmap(cm, saveToFile=None, annot=True, fmt="d", cmap="Blues", xtickla
     cbar = ax.figure.colorbar(im, ax=ax)
 
     # Show the plot
-    if(saveToFile is not None):
+    if saveToFile is not None:
         plt.savefig(saveToFile)
-        
+
     plt.show()
